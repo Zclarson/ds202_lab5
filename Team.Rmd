@@ -1,0 +1,11 @@
+---
+title: "Team.Rmd"
+author: "Julai Lundstrum and Zack Larson"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Lab 5
