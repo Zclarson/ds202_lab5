@@ -1,14 +1,10 @@
 ---
-title: "Team.Rmd"
-author: "Julia Lundstrum and Zack Larson"
+title: "Individual2"
+author: "Julia Lundstrum"
+date: "4/15/2021"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-## Lab 5
 ```{r, include=FALSE}
 library(tidyverse)
 library(dplyr)
@@ -112,4 +108,4 @@ bothmap <- both %>%
 ggplot(bothmap, aes(x=long, y = lat)) + geom_polygon(aes(group=group, fill = diff)) + theme_map() + scale_fill_distiller(palette='RdBu')
 ```
 
-Overall, there are more fatalities in summer months than winter months. There are some states such as Florida that have more fatalities in the winter than the summer.
+Overall, there are more fatalities in summer months than winter months. There are some states such as Florida that have more fatalities in the winter than the summer. 
