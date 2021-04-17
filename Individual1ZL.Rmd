@@ -1,0 +1,112 @@
+---
+title: "Individual1ZL.Rmd"
+author: "Zack Larson"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Loading Data
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+accident <- read.csv("https://raw.githubusercontent.com/xdaiISU/ds202materials/master/hwlabs/fars2017/accident.csv", stringsAsFactors = FALSE)
+person <- read.csv("https://raw.githubusercontent.com/xdaiISU/ds202materials/master/hwlabs/fars2017/person.csv", stringsAsFactors = FALSE)
+
+```
+
+## 1.
+According to our findings and the graph shown, there are some days of the week that accidents are more common than others. The graph shows that the weekend is the most likely time to have an accident than during the middle of the week. The graph shows days 1 and 7 as the highest rate of accidents, this represents Sunday and Saturday respectively. This makes sense since people are more likely to drink and drive then and also more free driving compared to the typical weekday where most people drive just to commute to work or get groceries. While on weekends, people are more likely to go and do something more exciting where they don't pay attention to their driving as much. This is extended even further when noticing that Fridays(day 6) are the 3rd most accident common day of the week therefore concluding that the weekend is the more likely time of the week to get into an accident.
+```{r}
+dayOfWeekStats <- accident %>%
+    group_by(DAY_WEEK) %>%
+    summarise(count = n())
+
+ggplot(dayOfWeekStats, aes(x = DAY_WEEK, y = count)) + geom_col() + xlab("Days of the Week") + ylab("Number of accidents")
+```
+
+## 2.
+```{r}
+fatalAccidentVictims <- person %>% filter(INJ_SEV == 4)#4 is the code for a fatal injury in the manual provided
+```
+
+## 3.
+```{r}
+fatalAccidentVictims <- fatalAccidentVictims[!is.na(fatalAccidentVictims$MAKE), ]
+StateMakeDF <- fatalAccidentVictims %>% count(STATE, MAKE) %>% group_by(STATE) %>%
+  slice(which.max(n))
+
+StateMakeDF
+```
+
+## 4.
+```{r}
+library(maps)
+states <- map_data('state')
+head(states)
+mapMake <-
+  StateMakeDF %>%
+  inner_join(states, by = c("STATE" = "group"))
+mapMake <- mapMake %>% group_by(STATE) %>% summarise(lat = mean(c(max(lat), min(lat))),long = mean(c(max(long), min(long))),make = max(MAKE))
+mapMake
+states %>% ggplot(states,mapping=aes(x=long, y=lat)) + geom_point() + geom_text(aes(label = make), data = mapMake)
+
+```
+
+## 5.
+```{r}
+peopleAndAccidents <- accident %>%
+  full_join(person, by = "ST_CASE")
+
+```
+
+## 6.
+```{r}
+dayOfWeekStats <- accident %>%
+    group_by(DAY_WEEK) %>%
+    summarise(count = n())
+
+ggplot(dayOfWeekStats, aes(x = DAY_WEEK, y = count)) + geom_col() + xlab("Days of the Week") + ylab("Number of accidents")
+
+HourStats <- accident %>% filter(HOUR<25) %>%
+    group_by(HOUR) %>%
+    summarise(count = n()) 
+
+ggplot(HourStats, aes(x = HOUR, y = count)) + geom_col() + xlab("Hour of the day") + ylab("Number of accidents")
+
+SexStats <- accident %>% full_join(person, by="ST_CASE") %>% 
+    group_by(person$SEX) %>%
+    summarise(count = n()) %>% ggplot(aes(x = person$SEX, y = count)) + geom_col() + xlab("Gender") + ylab("Number of accidents")
+```
+
+## 7.
+```{r}
+
+CountyDF <- fatalAccidentVictims %>% group_by(COUNTY) %>%
+  summarise(count = n())
+
+counties <- map_data('county')
+mapCounty <- CountyDF %>% left_join(states, by = c("COUNTY" = "group"))
+
+mapCounty <- mapCounty %>% group_by(COUNTY) %>% summarise(lat = mean(c(max(lat), min(lat))),long = mean(c(max(long), min(long))),count = max(count))
+mapCounty
+
+counties %>% ggplot(counties,mapping=aes(x=long, y=lat)) + geom_polygon(mapCounty,mapping=aes(group = COUNTY, fill=count))
+```
+
+## 8.
+First for this analysis, we looked at data from all states to see if there was a difference in the number of fatal accidents between summer and winter. The data shows that in general, there are more fatal accidents in the summer time than in the winter. This could be due to a number of reasons like people are more attentive and driving safely during the winter because they are aware of ice and such. We also looked at if the states and location might have an impact on this. In order to analyze this, we chose Arizona and Minnesota because one state is very hot with no snow and the other is the opposite with harsh winters. Looking at the data, it does not seem that the states depend on these weather stats. This is because the general trend for both Arizona and Minnesota are pretty similar. Both in general have more serious accidents during the summer but just slightly more.
+```{r}
+MonthlyStats <- fatalAccidentVictims %>%
+    group_by(MONTH,STATE) %>%
+    summarise(count = n())
+
+ggplot(MonthlyStats, aes(x = MONTH, y = count)) + geom_col() + xlab("Month number") + ylab("Number of deadly accidents")
+
+MonthlyStats <- MonthlyStats %>% filter(STATE==4 | STATE==27)#Comparing Arizona and Minnesota to see weather differences
+
+ggplot(MonthlyStats, aes(x = MONTH, y = count)) + geom_col() + xlab("Month number") + ylab("Number of deadly accidents") + facet_grid(STATE ~ .)
+```
