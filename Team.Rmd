@@ -18,7 +18,7 @@ library(ggthemes)
 library(RColorBrewer)
 acc <- read.csv("https://raw.githubusercontent.com/xdaiISU/ds202materials/master/hwlabs/fars2017/accident.csv", stringsAsFactors = FALSE)
 per <- read.csv("https://raw.githubusercontent.com/xdaiISU/ds202materials/master/hwlabs/fars2017/person.csv", stringsAsFactors = FALSE)
-geo <- read_excel('../FRPP.xlsx', col_types = c("skip", "text", "numeric","numeric","text","numeric","text","numeric","skip","skip","skip"))
+geo <- read_excel('./FRPP.xlsx', col_types = c("skip", "text", "numeric","numeric","text","numeric","text","numeric","skip","skip","skip"))
 ```
 
 #### Are there some days of the week where more accidents happen than the others (see FARS manual, use variable DAY_WEEK)?
@@ -46,19 +46,23 @@ dmake <- subset(fata, !is.na(`MAKE`)) %>%
 #### Create a map, and label each state with the most dangerous vehicle. Discuss the definition of the most dangerous vehicle, and what you find from the map. (Hint: Read the description for the STATE and COUNTY columns in the FARS manual. The state & county codes are Geographic Locator Codes (GLCs) from the General Services Administration’s (GSA) publication. Use readxl::read_xlsx to read in the GLCs.)
 ```{r}
 states <- map_data("state")
+
+#The state and state code are the same in both dfs and then we added the state name column after the region column in the second df
 dangmap <- dmake %>%
   inner_join(geo, by = c("STATE" = "State Code")) %>%
   select(STATE, MAKE, "State Name") %>%
   distinct() %>%
   mutate("State Name" = tolower(`State Name`)) %>%
   inner_join(states, by = c("State Name" = "region"))
+
+#We plotted the text labels based on the average coordinates that the accident took place so that will make it more likley to see the text the best
 names <- dangmap %>% 
   group_by(`State Name`, MAKE) %>%
   summarize(long=mean(long), lat=mean(lat))
 ggplot(dangmap, aes(x=long, y = lat)) + geom_polygon(aes(group=group)) + geom_text(aes(label=MAKE), color='red', data=names) + theme_map()
 ```
 
-The most dangerous vehicle make is being described as the vehicle make that was responsible for the most fatalaties in these data sets. This fails to take into account the popularity of the vehicle make.
+The most dangerous vehicle make is being described as the vehicle make that was responsible for the most fatalities in these data sets. This fails to take into account the popularity of the vehicle make.
 
 #### Join the accident and person table (work out which variable(s) to use)
 ```{r}
@@ -68,6 +72,7 @@ joined <- acc %>%
 
 #### Tally the number of accidents by day of the week (DAY_WEEK), hour of the day (HOUR) and gender (SEX). Visualize the results and explain what you find.
 ```{r}
+#We figured it was easiest to use the hour data for the x axis, the sex for the color since there are only 2 of them, and the day of the week in a facet grid because 7 of those are more appealing than 24 if we used hour
 nums <- joined %>%
   count(DAY_WEEK, HOUR.x, SEX) %>%
   filter(HOUR.x < 24)
@@ -78,12 +83,14 @@ It appears that men are in more accidents than women. The most accidents happen 
 
 #### Now plot a choropleth map of the number of deaths on a county level. Also explain what you find.
 ```{r}
+#Like we did with the state data, we took the county code and COUNTY number from each data frame and joined it on that. Then we decided it would be best to also include that county name based on the subregion column
 counties <- map_data("county")
 cd <- fata %>%
   count(STATE, COUNTY) %>%
   right_join(geo, by = c("STATE" = "State Code", "COUNTY" = "County Code")) %>%
   select(COUNTY, STATE, n, "State Name", "County Name") %>%
   distinct()
+
 cdmap <- cd %>% 
   mutate("State Name" = tolower(`State Name`), "County Name" = tolower(`County Name`)) %>%
   right_join(counties, by = c("State Name" = "region", "County Name" = "subregion"))
@@ -98,10 +105,12 @@ Since this map is going by totals instead of per capita, a lot of the more popul
 wint <- fata %>%
   filter(MONTH == c(12,1,2)) %>%
   count(STATE)
+
 both <- fata %>%
   filter(MONTH == c(6,7,8)) %>%
   count(STATE) %>%
   full_join(wint, by= "STATE")
+
 both$diff <- both$n.x - both$n.y
 bothmap <- both %>% 
   right_join(geo, by = c("STATE" = "State Code")) %>%
@@ -109,6 +118,7 @@ bothmap <- both %>%
   distinct() %>%
   mutate("State Name" = tolower(`State Name`)) %>%
   right_join(states, by = c("State Name" = "region"))
+
 ggplot(bothmap, aes(x=long, y = lat)) + geom_polygon(aes(group=group, fill = diff)) + theme_map() + scale_fill_distiller(palette='RdBu')
 ```
 
